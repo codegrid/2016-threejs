@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>=^.^=</title>
+<style>
+body{
+  margin: 0;
+}
+canvas{
+  display: block;
+}
+.info{
+  position: absolute;
+}
+</style>
+</head>
+<body>
+<script src="../lib/three.min.js"></script>
+<script src="../lib/OrbitControls.js"></script>
+<script>
+var width  = window.innerWidth,
+    height = window.innerHeight,
+    clock = new THREE.Clock(),
+    scene,
+    camera,
+    controls,
+    renderer,
+    loader = new THREE.JSONLoader(),
+    textureLoader = new THREE.TextureLoader(),
+    cubeTextureLoader = new THREE.CubeTextureLoader(),
+    textureCube,
+    i, sphere;
+
+scene = new THREE.Scene();
+
+camera = new THREE.PerspectiveCamera( 40, width / height, 0.1, 100 );
+camera.position.set( 0, 0, 8 );
+
+renderer = new THREE.WebGLRenderer( { antialias: true } );
+renderer.setSize( width, height );
+renderer.setClearColor( 0xcccccc );
+        renderer.gammaInput = true;
+        renderer.gammaOutput = true;
+document.body.appendChild( renderer.domElement );
+
+scene.add( new THREE.HemisphereLight( 0x443333, 0x222233, 4 ) );
+
+textureCube = cubeTextureLoader.load( [
+  './LancellottiChapel/posx.jpg',
+  './LancellottiChapel/negx.jpg',
+  './LancellottiChapel/posy.jpg',
+  './LancellottiChapel/negy.jpg',
+  './LancellottiChapel/posz.jpg',
+  './LancellottiChapel/negz.jpg'
+] );
+
+for ( i = 0; i < 11; i ++ ) {
+
+  sphere = new THREE.Mesh(
+    new THREE.SphereGeometry( 0.4, 16, 16 ),
+    new THREE.MeshStandardMaterial( {
+
+      color: 0xFFC355,
+      roughness: i * 0.1,
+      metalness: 1,
+      envMap: textureCube
+
+    } )
+  );
+  sphere.position.set( i - 5, 0.5, 0 );
+  scene.add( sphere );
+
+  sphere = new THREE.Mesh(
+    new THREE.SphereGeometry( 0.4, 16, 16 ),
+    new THREE.MeshStandardMaterial( {
+
+      color: 0xff0000,
+      roughness: i * 0.1,
+      metalness: 0,
+      envMap: textureCube
+
+    } )
+  );
+  sphere.position.set( i - 5, -0.5, 0 );
+  scene.add( sphere );
+
+}
+
+
+( function renderLoop () {
+
+  var elapsed = clock.getElapsedTime();
+
+  requestAnimationFrame( renderLoop );
+  camera.position.set(
+    Math.cos( elapsed * 0.25 ) * 6,
+    0,
+    Math.max( Math.sin( elapsed * 0.25 ) * 8, 3 )
+  )
+  renderer.render( scene, camera );
+
+} )();
+</script>
+
+</body>
+</html>

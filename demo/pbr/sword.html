@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width">
+<title>=^.^=</title>
+<style>
+body{
+  margin: 0;
+}
+canvas{
+  display: block;
+}
+.info{
+  position: absolute;
+}
+</style>
+</head>
+<body>
+<div class="info">model by <a href="https://www.cgtrader.com/free-3d-models/weapon-military/melee/sword-of-artorias#modal-registration">Sword of Artorias free 3D Model Game ready</a></div>
+<script src="../lib/three.min.js"></script>
+<script src="../lib/OrbitControls.js"></script>
+<script>
+var width  = window.innerWidth,
+    height = window.innerHeight,
+    clock = new THREE.Clock(),
+    lookAt = new THREE.Vector3( 0, 1.5, 0 ),
+    scene,
+    camera,
+    controls,
+    renderer,
+    loader = new THREE.JSONLoader(),
+    textureLoader = new THREE.TextureLoader(),
+    cubeTextureLoader = new THREE.CubeTextureLoader(),
+    textureCube, shader,
+    skyboxMaterial,
+    skybox,
+    swordMaterial,
+    sword = new THREE.Object3D();
+
+scene = new THREE.Scene();
+
+camera = new THREE.PerspectiveCamera( 40, width / height, 0.1, 100 );
+camera.position.set( 0, -.75, .75 );
+
+renderer = new THREE.WebGLRenderer( { antialias: true } );
+renderer.setSize( width, height );
+        renderer.gammaInput = true;
+        renderer.gammaOutput = true;
+document.body.appendChild( renderer.domElement );
+
+controls = new THREE.OrbitControls( camera, renderer.domElement );
+controls.enablePan = false;
+controls.autoRotate = true;
+controls.rotateSpeed = 0.5;
+
+scene.add( new THREE.HemisphereLight( 0x443333, 0x222233, 4 ) );
+
+textureCube = cubeTextureLoader.load( [
+  './LancellottiChapel/posx.jpg',
+  './LancellottiChapel/negx.jpg',
+  './LancellottiChapel/posy.jpg',
+  './LancellottiChapel/negy.jpg',
+  './LancellottiChapel/posz.jpg',
+  './LancellottiChapel/negz.jpg'
+] );
+
+shader = THREE.ShaderLib[ "cube" ];
+shader.uniforms[ "tCube" ].value = textureCube;
+
+skyboxMaterial = new THREE.ShaderMaterial( {
+
+  fragmentShader: shader.fragmentShader,
+  vertexShader: shader.vertexShader,
+  uniforms: shader.uniforms,
+  depthWrite: false,
+  side: THREE.BackSide
+
+} );
+
+skybox = new THREE.Mesh( new THREE.BoxGeometry( 100, 100, 100 ), skyboxMaterial );
+scene.add( skybox );
+
+swordMaterial = new THREE.MeshStandardMaterial( {
+
+  map: textureLoader.load( 'sword/albedo.jpg' ),
+  roughnessMap: textureLoader.load( 'sword/roughness.jpg' ),
+  metalnessMap: textureLoader.load( 'sword/metalness.jpg' ),
+  normalMap: textureLoader.load( 'sword/normal.jpg' ),
+  envMap: textureCube
+
+} );
+
+loader.load( 'sword/model.json', function( geometry, materials ) {
+
+  sword = new THREE.Mesh(
+    geometry,
+    new THREE.MeshFaceMaterial( [ swordMaterial ] )
+  );
+  sword.position.set( 0, -1.5, 0 );
+
+  scene.add( sword );
+
+} );
+
+
+( function renderLoop () {
+
+  var elapsed = clock.getElapsedTime();
+
+  requestAnimationFrame( renderLoop );
+  controls.update();
+  renderer.render( scene, camera );
+
+} )();
+</script>
+
+</body>
+</html>
