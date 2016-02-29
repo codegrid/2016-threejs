@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>=^.^=</title>
+<style>
+body{margin: 0;padding: 0; background: #000;}
+canvas{display: block;}
+</style>
+</head>
+<body>
+
+<script src="../lib/three.min.js"></script>
+<script>
+
+'use strict';
+
+var width, height, clock, scene, camera, renderer;
+var loader = new THREE.JSONLoader();
+var textureLoader = new THREE.TextureLoader();
+var ambientLight, mesh, action = {}, mixer;
+
+width  = window.innerWidth;
+height = window.innerHeight;
+clock  = new THREE.Clock();
+scene  = new THREE.Scene();
+camera = new THREE.PerspectiveCamera( 40, width / height, 1, 100 );
+camera.position.set( 0, .5, 2 );
+renderer = new THREE.WebGLRenderer();
+renderer.setSize( width, height );
+document.body.appendChild( renderer.domElement );
+
+ambientLight = new THREE.AmbientLight( 0xffffff );
+scene.add( ambientLight );
+
+
+var groundDiffuse = textureLoader.load( 'grass.png' );
+groundDiffuse.repeat.set( 3, 3 );
+groundDiffuse.wrapS = groundDiffuse.wrapT = THREE.RepeatWrapping;
+
+var ground = new THREE.Mesh(
+  new THREE.PlaneBufferGeometry( 10, 10 ),
+  new THREE.MeshPhongMaterial( { map: groundDiffuse } )
+);
+
+ground.rotation.x = THREE.Math.degToRad( -90 );
+ground.receiveShadow = true;
+scene.add( ground );
+
+
+var myMaterial = new THREE.ShaderMaterial( {
+
+  uniforms: THREE.UniformsUtils.merge( [
+
+    THREE.UniformsLib[ "common" ],
+    THREE.UniformsLib[ "aomap" ],
+    THREE.UniformsLib[ "lightmap" ],
+    THREE.UniformsLib[ "emissivemap" ],
+    THREE.UniformsLib[ "bumpmap" ],
+    THREE.UniformsLib[ "normalmap" ],
+    THREE.UniformsLib[ "displacementmap" ],
+    THREE.UniformsLib[ "fog" ],
+    THREE.UniformsLib[ "ambient" ],
+    THREE.UniformsLib[ "lights" ],
+
+    {
+      "emissive" : { type: "c", value: new THREE.Color( 0x000000 ) },
+      "specular" : { type: "c", value: new THREE.Color( 0x111111 ) },
+      "shininess": { type: "f", value: 30 }
+    },
+
+    {
+      // ADDED UNIFROMS
+      viewVector: { type: "v3", value: new THREE.Vector3() },
+      viewMatrixInverse : { type: 'm4', value: new THREE.Matrix4() }
+    }
+
+  ] ),
+
+  vertexShader   : [
+
+    "#define PHONG",
+
+    "varying vec3 vViewPosition;",
+
+    "#ifndef FLAT_SHADED",
+
+    " varying vec3 vNormal;",
+
+    "#endif",
+
+    THREE.ShaderChunk[ "common" ],
+    THREE.ShaderChunk[ "uv_pars_vertex" ],
+    THREE.ShaderChunk[ "uv2_pars_vertex" ],
+    THREE.ShaderChunk[ "displacementmap_pars_vertex" ],
+    THREE.ShaderChunk[ "envmap_pars_vertex" ],
+    THREE.ShaderChunk[ "lights_phong_pars_vertex" ],
+    THREE.ShaderChunk[ "color_pars_vertex" ],
+    THREE.ShaderChunk[ "morphtarget_pars_vertex" ],
+    THREE.ShaderChunk[ "skinning_pars_vertex" ],
+    THREE.ShaderChunk[ "shadowmap_pars_vertex" ],
+    THREE.ShaderChunk[ "logdepthbuf_pars_vertex" ],
+
+    'uniform mat4 viewMatrixInverse;', //ADDED
+    'uniform vec3 viewVector;',        //ADDED
+    'varying float vIntensity;',       //ADDED
+
+    "void main() {",
+
+      THREE.ShaderChunk[ "uv_vertex" ],
+      THREE.ShaderChunk[ "uv2_vertex" ],
+      THREE.ShaderChunk[ "color_vertex" ],
+
+      THREE.ShaderChunk[ "beginnormal_vertex" ],
+      THREE.ShaderChunk[ "morphnormal_vertex" ],
+      THREE.ShaderChunk[ "skinbase_vertex" ],
+      THREE.ShaderChunk[ "skinnormal_vertex" ],
+      THREE.ShaderChunk[ "defaultnormal_vertex" ],
+
+    "#ifndef FLAT_SHADED", // Normal computed with derivatives when FLAT_SHADED
+
+    " vNormal = normalize( transformedNormal );",
+
+    "#endif",
+
+      THREE.ShaderChunk[ "begin_vertex" ],
+      THREE.ShaderChunk[ "displacementmap_vertex" ],
+      THREE.ShaderChunk[ "morphtarget_vertex" ],
+      THREE.ShaderChunk[ "skinning_vertex" ],
+      THREE.ShaderChunk[ "project_vertex" ],
+      THREE.ShaderChunk[ "logdepthbuf_vertex" ],
+
+    " vViewPosition = - mvPosition.xyz;",
+
+      THREE.ShaderChunk[ "worldpos_vertex" ],
+      THREE.ShaderChunk[ "envmap_vertex" ],
+      THREE.ShaderChunk[ "lights_phong_vertex" ],
+      THREE.ShaderChunk[ "shadowmap_vertex" ],
+
+    ' vec3 viewNormal = normalize( normalMatrix * vec4( viewMatrixInverse * vec4( viewVector, 1.0 ) ).xyz );', //ADDED
+    ' vIntensity = pow( 1.0 - dot( vNormal, viewNormal ), 3.0 );', //ADDED
+
+    "}"
+
+  ].join( "\n" ),
+
+  fragmentShader : [
+
+    "#define PHONG",
+
+    "uniform vec3 diffuse;",
+    "uniform vec3 emissive;",
+    "uniform vec3 specular;",
+    "uniform float shininess;",
+    "uniform float opacity;",
+
+    THREE.ShaderChunk[ "common" ],
+    THREE.ShaderChunk[ "color_pars_fragment" ],
+    THREE.ShaderChunk[ "uv_pars_fragment" ],
+    THREE.ShaderChunk[ "uv2_pars_fragment" ],
+    THREE.ShaderChunk[ "map_pars_fragment" ],
+    THREE.ShaderChunk[ "alphamap_pars_fragment" ],
+    THREE.ShaderChunk[ "aomap_pars_fragment" ],
+    THREE.ShaderChunk[ "lightmap_pars_fragment" ],
+    THREE.ShaderChunk[ "emissivemap_pars_fragment" ],
+    THREE.ShaderChunk[ "envmap_pars_fragment" ],
+    THREE.ShaderChunk[ "fog_pars_fragment" ],
+    THREE.ShaderChunk[ "bsdfs" ],
+    THREE.ShaderChunk[ "ambient_pars" ],
+    THREE.ShaderChunk[ "lights_pars" ],
+    THREE.ShaderChunk[ "lights_phong_pars_fragment" ],
+    THREE.ShaderChunk[ "shadowmap_pars_fragment" ],
+    THREE.ShaderChunk[ "bumpmap_pars_fragment" ],
+    THREE.ShaderChunk[ "normalmap_pars_fragment" ],
+    THREE.ShaderChunk[ "specularmap_pars_fragment" ],
+    THREE.ShaderChunk[ "logdepthbuf_pars_fragment" ],
+
+    'varying float vIntensity;', //ADDED
+
+    "void main() {",
+
+    " vec4 diffuseColor = vec4( diffuse, opacity );",
+    " ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );",
+    " vec3 totalEmissiveLight = emissive;",
+
+      THREE.ShaderChunk[ "logdepthbuf_fragment" ],
+      THREE.ShaderChunk[ "map_fragment" ],
+      THREE.ShaderChunk[ "color_fragment" ],
+      THREE.ShaderChunk[ "alphamap_fragment" ],
+      THREE.ShaderChunk[ "alphatest_fragment" ],
+      THREE.ShaderChunk[ "specularmap_fragment" ],
+      THREE.ShaderChunk[ "normal_fragment" ],
+      THREE.ShaderChunk[ "emissivemap_fragment" ],
+
+      // accumulation
+      THREE.ShaderChunk[ "lights_phong_fragment" ],
+      THREE.ShaderChunk[ "lights_template" ],
+
+      // modulation
+      THREE.ShaderChunk[ "aomap_fragment" ],
+
+      "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveLight;",
+
+      THREE.ShaderChunk[ "envmap_fragment" ],
+      THREE.ShaderChunk[ "linear_to_gamma_fragment" ],
+
+      THREE.ShaderChunk[ "fog_fragment" ],
+
+    // " gl_FragColor = vec4( outgoingLight, diffuseColor.a );",
+
+    'gl_FragColor = vec4(',                //ADDED
+      'outgoingLight,',             //ADDED
+      'vIntensity + 0.05',                 //ADDED
+    ');',                                  //ADDED
+
+    "}"
+
+  ].join( "\n" )
+
+} );
+console.log( myMaterial.vertexShader );
+myMaterial.lights = true;
+myMaterial.transparent = true;
+myMaterial.skinning = true;
+myMaterial.defines.USE_MAP = true;
+myMaterial.uniforms.map = {
+  type: 't',
+  value: textureLoader.load( './mobuko-color.png' )
+};
+
+loader.load( './mobuko.json', function( geometry ) {
+
+  mesh = new THREE.SkinnedMesh(
+    geometry,
+    new THREE.MeshFaceMaterial( [ myMaterial ] )
+  );
+  mesh.scale.set( 0.25, 0.25, 0.25 );
+
+  mixer  = new THREE.AnimationMixer( mesh );
+  action.run  = mixer.clipAction( geometry.animations[ 0 ] );
+
+  action.run.setEffectiveWeight( 1 );
+  action.run.play();
+  scene.add( mesh );
+
+} );
+
+
+;( function update () {
+
+  requestAnimationFrame( update );
+
+  var delta = clock.getDelta();
+  var theta = clock.getElapsedTime();
+
+  if ( mixer ) { mixer.update( delta ); }
+
+  if ( !!mesh ) {
+
+    myMaterial.uniforms.viewVector.value.subVectors( camera.position, mesh.position );
+    myMaterial.uniforms.viewMatrixInverse.value.getInverse( mesh.matrixWorld );
+
+  }
+
+  renderer.render( scene, camera );
+
+} )();
+
+</script>
+
+</body>
+</html>
