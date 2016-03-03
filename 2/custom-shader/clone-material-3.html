@@ -244,11 +244,11 @@ loader.load( './mobuko.json', function( geometry ) {
   requestAnimationFrame( update );
 
   var delta = clock.getDelta();
-  var theta = clock.getElapsedTime();
+  var elapsed = clock.getElapsedTime();
 
   if ( mixer ) { mixer.update( delta ); }
 
-  myMaterial.uniforms.time.value = theta;
+  myMaterial.uniforms.time.value = elapsed;
 
   renderer.render( scene, camera );
 

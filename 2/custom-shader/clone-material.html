@@ -217,7 +217,7 @@ loader.load( './mobuko.json', function( geometry, materials ) {
   requestAnimationFrame( update );
 
   var delta = clock.getDelta();
-  var theta = clock.getElapsedTime();
+  var elapsed = clock.getElapsedTime();
 
   if ( mixer ) { mixer.update( delta ); }
 

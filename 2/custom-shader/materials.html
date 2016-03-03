@@ -109,12 +109,12 @@ loader.load( './teapot.json', function( geometry ) {
   requestAnimationFrame( update );
 
   var delta = clock.getDelta();
-  var theta = clock.getElapsedTime();
+  var elapsed = clock.getElapsedTime();
 
   camera.position.set(
-    Math.sin( theta ) * 6,
-    Math.sin( theta ) * 2,
-    Math.cos( theta ) * 6
+    Math.sin( elapsed * 0.5 ) * 6,
+    Math.sin( elapsed * 0.5 ) * 2,
+    Math.cos( elapsed * 0.5 ) * 6
   );
   camera.lookAt( scene.position );
 
